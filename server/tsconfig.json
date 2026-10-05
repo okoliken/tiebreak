@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    // Node 24 runs modern JS natively, so there is little to down-level.
+    "target": "ES2023",
+    "lib": ["ES2023"],
+
+    // "NodeNext" makes TypeScript follow Node's real ESM rules. Because
+    // package.json says "type": "module", relative imports must end in ".js"
+    // even though the file on disk is ".ts" -- you are naming the *compiled*
+    // file. It looks wrong the first ten times. It is correct.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "declaration": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

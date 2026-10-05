@@ -1,0 +1,9 @@
+packages:
+  - client
+  - server
+allowBuilds:
+  esbuild: true
+  prisma: true
+  "@prisma/engines": true
+  "@prisma/client": true
+  "@node-rs/argon2": true

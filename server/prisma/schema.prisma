@@ -1,0 +1,163 @@
+// Tiebreak's database. `pnpm db:migrate` diffs this file against Postgres
+// and writes the SQL migration for you.
+//
+// YOUR JOB: write the six models below. The steps describe every field. Once
+// they're written, run `pnpm db:migrate --name init` from server/.
+//
+// Field syntax:  name  Type  @attribute @attribute
+// Relation syntax:
+//   owner    User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+//   ownerId  String @db.Uuid
+// ...and the other side of the relation is just a list: `polls Poll[]`.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── User ────────────────────────────────────────────────────────────────────
+// A poll *creator*. Voters are never Users.
+//
+// 1. id           String, uuid primary key (@id @default(uuid()) @db.Uuid)
+// 2. email        String? @unique  -- optional because guests have no email.
+//                 Postgres allows many NULLs in a unique column, so lots of
+//                 guests without an email don't clash.
+// 3. name         String
+// 4. passwordHash String?  -- argon2 hash, null for guests. Never the password.
+// 5. avatarSeed   String   -- DiceBear seed; the client turns it into an image.
+// 6. isGuest      Boolean @default(false)
+// 7. createdAt    DateTime @default(now())
+// 8. polls        Poll[]
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String? @unique
+  name String
+  passwordHash String?
+  avatarSeed String
+  isGuest Boolean @default(false)
+  createdAt DateTime @default(now())
+  polls Poll[]
+}
+
+// ── Poll ────────────────────────────────────────────────────────────────────
+// 1. id, createdAt  (same as User)
+// 2. slug        String @unique -- the share-link id (/p/pizza-night-x7k2).
+//                You'll generate it from the question + a nanoid suffix.
+// 3. question    String
+// 4. multiChoice Boolean @default(false)
+// 5. closesAt    DateTime   -- the scheduled end
+// 6. closedAt    DateTime?  -- set when the creator ends early; null otherwise
+// 7. owner/ownerId  -> User, onDelete: Cascade
+// 8. options Option[], voters Voter[], suggestions Suggestion[]
+//
+// THINK: there's no `status` column. "open" means
+//   closedAt == null AND closesAt > now()
+// A stored status would go stale the second closesAt passed with nobody
+// around to update it. Derive it when you read instead.
+model Poll {
+  id String @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  slug String @unique
+  question String
+  multiChoice Boolean @default(false)
+  closesAt DateTime
+  closedAt DateTime?
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String @db.Uuid
+  options Option[]
+  voters Voter[]
+  suggestions Suggestion[]
+}
+
+
+// ── Option ──────────────────────────────────────────────────────────────────
+// 1. id, createdAt
+// 2. label     String
+// 3. position  Int  -- keeps the creator's original order for the vote page
+// 4. poll/pollId  -> Poll, Cascade
+// 5. suggestedBy/suggestedById -> Voter?, optional; null means the creator
+//    wrote it. onDelete: SetNull
+// 6. choices   Choice[]
+//
+// No `votes` count column either, for the same reason as status: count Choices.
+model Option {
+  id String @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  label String
+  position Int
+  poll Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId String @db.Uuid
+  suggestedBy Voter? @relation(fields: [suggestedById], references: [id], onDelete: SetNull)
+  suggestedById String? @db.Uuid
+  choices Choice[]
+}
+
+// ── Voter ───────────────────────────────────────────────────────────────────
+// A person who voted on ONE poll. "Priya" on two polls is two Voter rows.
+// 1. id, createdAt
+// 2. name, avatarSeed   String
+// 3. tokenHash  String @unique -- sha256 of the voter token you hand out.
+//    Same idea as a password: the DB never stores the real secret.
+// 4. poll/pollId -> Poll, Cascade
+// 5. choices Choice[], suggestions Suggestion[], suggestedOptions Option[]
+//    (Prisma will ask you to name the two relations to Option/Suggestion if
+//    it's ambiguous -- read its error, it tells you exactly what to add.)
+
+model Voter {
+  id String @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  name String
+  avatarSeed String
+  tokenHash String @unique
+  poll Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId String @db.Uuid
+  choices Choice[]
+  suggestedOptions Option[]
+  suggestions Suggestion[]
+}
+
+// ── Choice ──────────────────────────────────────────────────────────────────
+// One ticked box. A multi-choice ballot with 3 ticks = 3 Choice rows.
+// 1. voter/voterId -> Voter, Cascade
+// 2. option/optionId -> Option, Cascade
+// 3. createdAt
+// 4. @@id([voterId, optionId])  -- composite key: the database itself makes
+//    "the same person ticks the same option twice" impossible.
+model Choice {
+  @@id([voterId, optionId])
+  voter Voter @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  voterId String @db.Uuid
+  option Option @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId String @db.Uuid
+  createdAt DateTime @default(now())
+}
+// ── Suggestion ──────────────────────────────────────────────────────────────
+// 1. id, createdAt
+// 2. label String
+// 3. status SuggestionStatus @default(PENDING)
+// 4. poll/pollId -> Poll, Cascade
+// 5. voter/voterId -> Voter, Cascade
+//
+// enum SuggestionStatus { PENDING APPROVED DECLINED }
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+// On approve you also create an Option with suggestedById = the voter.
+
+model Suggestion {
+  id String @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  label String
+  status SuggestionStatus @default(PENDING)
+  poll Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId String @db.Uuid
+  voter Voter @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  voterId String @db.Uuid
+}

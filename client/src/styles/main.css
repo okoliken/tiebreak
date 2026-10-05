@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* Colors sampled from the reference screenshot. Fonts are a best guess. */
+@theme {
+  --font-display: "Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+
+  --color-cream: #f9f2e2;
+  --color-paper: #fefaf1;
+  --color-sand: #f0e2c8;
+  --color-track: #f1e0cc;
+  --color-line: #e7d7bd;
+
+  --color-ink: #311e18;
+  --color-ink-2: #38261a;
+  --color-muted: #786956;
+
+  --color-tomato: #e2542c;
+  --color-tomato-deep: #a64324;
+  --color-tomato-dim: #ba3d1d;
+  --color-blush: #fbe0d6;
+  --color-mustard: #f1c54c;
+  --color-teal: #1e7565;
+  --color-teal-dark: #186457;
+  --color-teal-soft: #cae1d7;
+  --color-teal-ink: #164e43;
+
+  --radius-card: 22px;
+  --shadow-pop: 0 3px 0 var(--color-ink);
+  --text-shadow-pop: 3px 3px 0 var(--color-mustard);
+
+  --animate-live: live 2s ease-out infinite;
+  @keyframes live {
+    from { opacity: 0.7; transform: scale(1); }
+    to { opacity: 0; transform: scale(1.8); }
+  }
+  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-cream font-body text-[15px] leading-normal text-ink antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display leading-[1.1];
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    @apply outline-3 outline-offset-2 outline-teal;
+  }
+}
+
+/* Reused enough to earn a name; everything else stays inline utilities. */
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-2 border-ink px-5 text-sm font-bold whitespace-nowrap no-underline transition active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55;
+  }
+  .btn-outline { @apply bg-paper hover:bg-white; }
+  .btn-dark { @apply border-ink-2 bg-ink-2 text-paper hover:bg-ink; }
+  .btn-teal { @apply bg-teal text-paper shadow-pop hover:bg-teal-dark; }
+  .btn-tomato { @apply bg-tomato text-paper shadow-pop hover:bg-tomato-deep; }
+  .btn-ghost { @apply border-transparent bg-transparent text-muted hover:text-ink; }
+
+  .card { @apply rounded-card border-2 border-ink bg-paper; }
+
+  .field {
+    @apply w-full rounded-2xl border-2 border-ink bg-paper px-4 py-3 text-base placeholder:text-muted/70 focus:outline-3 focus:outline-offset-0 focus:outline-mustard;
+  }
+  .label { @apply mb-2 block text-sm font-bold; }
+
+  .page { @apply mx-auto w-full max-w-[calc(720px+2*var(--spacing-gutter))] px-gutter; }
+}
+
+@theme {
+  --spacing-gutter: clamp(16px, 4vw, 40px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

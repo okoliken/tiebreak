@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tiebreak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tiebreak
+      POSTGRES_PASSWORD: tiebreak
+      POSTGRES_DB: tiebreak
+    ports:
+      # 5432 testfiesta, 5433 bookmarks-api, 5434 crm -- so 5435.
+      - "5435:5432"
+    volumes:
+      - tiebreak_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tiebreak -d tiebreak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  tiebreak_pgdata:
